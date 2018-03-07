@@ -7,21 +7,30 @@ buildscript {
     ext.junit_version = '4.12'
 
     repositories {
+        flatDir { dirs "lib/dependencies" }
         mavenLocal()
         mavenCentral()
         jcenter()
     }
 
     dependencies {
+        classpath fileTree(dir: 'lib/dependencies', include: '*.jar')
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "net.corda.plugins:cordformation:$corda_gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$corda_gradle_plugins_version"
     }
 }
 
-repositories {
-    mavenLocal()
-    jcenter()
-    mavenCentral()
-    maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases' }
+allprojects {
+    repositories {
+        if (project.hasProperty("dependencies.gather")) {
+            mavenLocal()
+            jcenter()
+            mavenCentral()
+            maven { url 'https://jitpack.io' }
+            maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases' }
+        } else {
+            flatDir { dirs "${project.rootProject.projectDir}/lib/dependencies" }
+        }
+    }
 }
