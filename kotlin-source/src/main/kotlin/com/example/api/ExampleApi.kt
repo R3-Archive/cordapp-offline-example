@@ -15,7 +15,7 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status.BAD_REQUEST
 import javax.ws.rs.core.Response.Status.CREATED
 
-val SERVICE_NAMES = listOf("Controller", "Network Map Service")
+val SERVICE_NAMES = listOf("Notary", "Network Map Service")
 
 // This API is accessible from /api/example. All paths specified below are relative to it.
 @Path("example")
@@ -81,13 +81,8 @@ class ExampleApi(private val rpcOps: CordaRPCOps) {
                 return Response.status(BAD_REQUEST).entity("Party named $partyName cannot be found.\n").build()
 
         return try {
-            val flowHandle = rpcOps.startTrackedFlow(::Initiator, iouValue, otherParty)
-            flowHandle.progress.subscribe { println(">> $it") }
-
-            // The line below blocks and waits for the future to resolve.
-            val result = flowHandle.returnValue.getOrThrow()
-
-            Response.status(CREATED).entity("Transaction id ${result.id} committed to ledger.\n").build()
+            val signedTx = rpcOps.startTrackedFlow(::Initiator, iouValue, otherParty).returnValue.getOrThrow()
+            Response.status(CREATED).entity("Transaction id ${signedTx.id} committed to ledger.\n").build()
 
         } catch (ex: Throwable) {
             logger.error(ex.message, ex)

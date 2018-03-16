@@ -1,6 +1,9 @@
 apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'net.corda.plugins.quasar-utils'
+
+jar.baseName = "cordapp-example"
 
 sourceSets {
     main {
@@ -13,10 +16,22 @@ sourceSets {
             srcDir "../config/test"
         }
     }
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
 }
 
 dependencies {
-    cordaCompile fileTree(dir: '../lib/dependencies' , include: '*.jar')
+    compileClasspath fileTree(dir: '../lib/dependencies', include: '*.jar')
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
@@ -31,6 +46,15 @@ dependencies {
     cordaRuntime "$corda_release_group:corda-webserver:$corda_release_version"
 
     testCompile "$corda_release_group:corda-node-driver:$corda_release_version"
+
+    // CorDapp dependencies
+    // Specify your cordapp's dependencies below, including dependent CorDapps
+    cordapp "$corda_release_group:corda-finance:$corda_release_version"
+}
+
+task integrationTest(type: Test, dependsOn: []) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
@@ -44,47 +68,56 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 
 task deployNodesKotlin(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
-    networkMap "O=Controller,L=London,C=GB"
     node {
-        name "O=Controller,L=London,C=GB"
-        advertisedServices = ["corda.notary.validating"]
+        name "O=Notary,L=London,C=GB"
+        notary = [validating: false]
         p2pPort 10002
-        rpcPort 10003
-        cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
+        cordapps = [
+                "$project.group:cordapp:$project.version"
+        ]
     }
     node {
         name "O=PartyA,L=London,C=GB"
-        advertisedServices = []
-        p2pPort 10005
-        rpcPort 10006
-        webPort 10007
-        cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
-        rpcUsers = [[user: "user1", "password": "test", "permissions": [
-                "StartFlow.com.example.flow.ExampleFlow\$Initiator"
-        ]]]
+        p2pPort 10003
+        rpcSettings {
+            address("localhost:10004")
+            adminAddress("localhost:10005")
+        }
+        cordapps = [
+                "$project.group:cordapp:$project.version"
+        ]
+        rpcUsers = [[user: "user1", password: "test", permissions: ["ALL"]]]
     }
     node {
         name "O=PartyB,L=New York,C=US"
-        advertisedServices = []
-        p2pPort 10008
-        rpcPort 10009
-        webPort 10010
-        cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
-        rpcUsers = [[user: "user1", "password": "test", "permissions": [
-                "StartFlow.com.example.flow.ExampleFlow\$Initiator"
-        ]]]
+        p2pPort 10006
+        rpcSettings {
+            address("localhost:10007")
+            adminAddress("localhost:10008")
+        }
+        cordapps = [
+                "$project.group:cordapp:$project.version"
+        ]
+        rpcUsers = [[user: "user1", password: "test", permissions: ["ALL"]]]
     }
     node {
-        name "O=PartyC,L=Paris,C=FR"
-        advertisedServices = []
-        p2pPort 10011
-        rpcPort 10012
-        webPort 10013
-        cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
-        rpcUsers = [[user: "user1", "password": "test", "permissions": [
-                "StartFlow.com.example.flow.ExampleFlow\$Initiator"
-        ]]]
+        name "O=PartyC,L=Lagos,C=NG"
+        p2pPort 10009
+        rpcSettings {
+            address("localhost:10010")
+            adminAddress("localhost:10011")
+        }
+        cordapps = [
+                "$project.group:cordapp:$project.version"
+        ]
+        rpcUsers = [[user: "user1", password: "test", permissions: ["ALL"]]]
     }
+}
+
+task runExampleClientRPCKotlin(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.example.client.ExampleClientRPCKt'
+    args 'localhost:10006'
 }
 
 task gatherDependencies(type: Copy) {

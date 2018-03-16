@@ -31,12 +31,13 @@ public class IOUState implements LinearState, QueryableState {
      */
     public IOUState(Integer value,
                     Party lender,
-                    Party borrower)
+                    Party borrower,
+                    UniqueIdentifier linearId)
     {
         this.value = value;
         this.lender = lender;
         this.borrower = borrower;
-        this.linearId = new UniqueIdentifier();
+        this.linearId = linearId;
     }
 
     public Integer getValue() { return value; }
@@ -65,6 +66,6 @@ public class IOUState implements LinearState, QueryableState {
 
     @Override
     public String toString() {
-        return String.format("%s(iou=%s, lender=%s, borrower=%s, linearId=%s)", getClass().getSimpleName(), value, lender, borrower, linearId);
+        return String.format("IOUState(value=%s, lender=%s, borrower=%s, linearId=%s)", value, lender, borrower, linearId);
     }
 }
